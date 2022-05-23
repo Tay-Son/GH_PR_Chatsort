@@ -6,12 +6,90 @@ import time
 
 class chatsort:
     def __init__(self, chat_source, ):
+        self.time_s = time.time()
         self.que_raw = Queue()
         self.que_emb = Queue()
-        
+        self.get_chat = self.get_chat_yt
+        self.freq_print = 1.0
+        self.model_ = 'sentence-transformers/all-distilroberta-v1'
+        self.is_run = True
+
+        self.opt_emb_t_l = 1.0
+        self.opt_emb_s_b = 32
         pass
 
-    def get_chat(self):
+    def refine_message(self, mew_raw):
+        mes_ref = mew_raw
+        return mes_ref
+
+    def get_chat_yt(self):
+        i_pc = pytchat.create(video_id=video_id)
+        while i_pc.is_alive():
+            for each_chat in i_pc.get().sync_items():
+                time_ = each_chat.datetime
+                uid_ = each_chat.author.channelId
+                mes_raw = each_chat.message
+                mes_ref = self.refine_message(mes_raw)
+                self.que_raw.put([time_, uid_, mes_raw, mes_ref])
+        self.que_raw.put(-1)
+        return
+
+    def get_chat_tw(self):
+        pass
+
+    def get_chat_dm(self):
+        pass
+
+    def embed_message(self):
+        st_ = SentenceTransformer(self.model_)
+        is_run = True
+        t_last_u = time.time()
+        while is_run:
+            if self.opt_emb_t_l <= (time.time() - t_last_u) \
+                    or self.opt_emb_s_b <= self.que_raw.qsize():
+                t_last_u = time.time()
+
+                lst_time = []
+                lst_uid = []
+                lst_mes_raw = []
+                lst_mes_ref = []
+
+                for _ in range(self.opt_emb_s_b):
+                    if self.que_raw.empty():
+                        break
+                    else:
+                        temp_ = self.que_raw.get()
+                        if temp_ == -1:
+                            is_run = False
+                        else:
+                            time_, uid_, mes_raw, mes_ref = self.que_raw.get()
+                            lst_time.append(time_)
+                            lst_uid.append(uid_)
+                            lst_mes_raw.append(mes_raw)
+                            lst_mes_ref.append(mes_ref)
+                lst_emb = st_.encode(lst_mes_ref)
+                for time_, uid_, mes_raw, mes_ref, emb_ in zip(lst_time,lst_uid,lst_mes_raw,lst_mes_ref,lst_emb):
+                    self.que_emb.put([time_, uid_, mes_raw, mes_ref, emb_])
+            else:
+                time.sleep(.1)
+        self.que_emb.put(-1)
+        return
+
+    def print_(self):
+        pass
+
+    def run_(self):
+        proc_gc = Process(target=self.get_chat)
+        proc_ec = Process(target=self.embed_chat)
+
+        proc_gc.start()
+        while self.que_raw.empty(): time.sleep(.1)
+        proc_ec.start()
+        while self.que_emb.empty(): time.sleep(.1)
+
+        is_run = True
+        while is_run:
+
 
 def data_source(video_id, que_origin):
     ist_pc = pytchat.create(video_id=video_id)
@@ -24,7 +102,7 @@ def data_source(video_id, que_origin):
 
 
 def embedder(que_origin, que_embedded):
-    model_ = SentenceTransformer('sentence-transformers/all-distilroberta-v1')
+    model_ = SentenceTransformer()
     t_last_u = time.time()
     is_run = True
     while is_run:
