@@ -1,8 +1,16 @@
-from sentence_transformers import SentenceTransformer
 
-class Embedder:
-    def __init__(self, model_="sentence-transformers/all-distilroberta-v1"):
-        self.model_ = model_
-        self.embedder_ = SentenceTransformer()
 
-    def run_(self):
+def worker(id, number, q):
+    increased_number = 0
+
+    for _ in range(number):
+        increased_number += 1
+
+    # 결과를 q에 저장
+    q.put(increased_number)
+    return
+
+
+
+
+
